@@ -1,15 +1,19 @@
 {
-  "name": "gatsby-starter-default",
-  "description": "Gatsby default starter",
+  "name": "wiki",
   "version": "1.0.0",
-  "author": "Kyle Mathews <mathews.kyle@gmail.com>",
+  "author": "Emily Horsman <me@emilyhorsman.com>",
   "dependencies": {
+    "debug": "^3.1.0",
     "gatsby": "next",
     "gatsby-plugin-react-helmet": "next",
     "gatsby-source-filesystem": "^1.5.39",
     "react": "^16.4.1",
     "react-dom": "^16.4.1",
-    "react-helmet": "^5.2.0"
+    "react-helmet": "^5.2.0",
+    "rehype-stringify": "^4.0.0",
+    "remark": "^9.0.0",
+    "remark-parse": "^5.0.0",
+    "remark-rehype": "^3.0.0"
   },
   "keywords": [
     "gatsby"
@@ -28,6 +32,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/gatsbyjs/gatsby-starter-default"
+    "url": "https://github.com/emilyhorsman/wiki"
   }
 }

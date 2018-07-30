@@ -23,11 +23,16 @@ const mdxQuery = graphql =>
 
 exports.onCreateWebpackConfig = ({ actions, loaders }) => {
   actions.setWebpackConfig({
+    resolveLoader: {
+      alias: {
+        'mdx-loader': require('path').resolve('./mdx-loader.js'),
+      },
+    },
     module: {
       rules: [
         {
           test: mdxTestRe,
-          use: [loaders.js(), '@mdx-js/loader'],
+          use: [loaders.js(), 'mdx-loader'],
         },
       ],
     },
