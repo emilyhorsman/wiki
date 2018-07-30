@@ -5,6 +5,7 @@ import { StaticQuery, graphql } from 'gatsby';
 
 import Header from './Header';
 import './Layout.css';
+import "katex/dist/katex.min.css";
 
 const Layout = ({ children, data }) => (
   <StaticQuery

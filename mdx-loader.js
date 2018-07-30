@@ -1,3 +1,4 @@
+const math = require('remark-math');
 const remark = require('remark-parse');
 const remarkRehypeBridge = require('remark-rehype');
 const unified = require('unified');
@@ -19,6 +20,20 @@ function toJSX(node) {
   }
 
   if (node.type === 'element') {
+    if (node.tagName === 'span' && node.properties.className === 'inlineMath') {
+      return {
+        jsx: `<InlineMath>${node.children[0].value}</InlineMath>`,
+        imports: ['InlineMath'],
+      };
+    }
+
+    if (node.tagName === 'div' && node.properties.className === 'math') {
+      return {
+        jsx: `<BlockMath>{String.raw\`${node.children[0].value}\`}</BlockMath>`,
+        imports: ['BlockMath'],
+      };
+    }
+
     const children = node.children.map(toJSX);
     const contents = children.map(c => c.jsx).join('');
     const imports = children.map(c => c.imports).reduce((a, b) => a.concat(b));
@@ -54,6 +69,12 @@ function toJSX(node) {
         if (componentName === 'Link') {
           return 'import {Link} from "gatsby";';
         }
+        if (componentName === 'InlineMath') {
+          return 'import {InlineMath} from "react-katex";';
+        }
+        if (componentName === 'BlockMath') {
+          return 'import {BlockMath} from "react-katex";';
+        }
 
         return `import ${componentName} from '../components/${componentName}';`;
       })
@@ -81,10 +102,13 @@ function hastToJSX() {
 
 const processor = unified()
   .use(remark)
+  .use(math)
   .use(remarkRehypeBridge, { allowDangerousHTML: true })
   .use(hastToJSX);
 
 module.exports = function(source, map, meta) {
   const callback = this.async();
-  processor.process(source).then(jsx => callback(null, jsx, map, meta));
+  processor.process(source).then(jsx => {
+    callback(null, jsx, map, meta);
+  });
 };
