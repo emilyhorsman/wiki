@@ -2,6 +2,8 @@ const math = require('remark-math');
 const remark = require('remark-parse');
 const remarkRehypeBridge = require('remark-rehype');
 const unified = require('unified');
+const { getOptions } = require('loader-utils');
+const validateOptions = require('schema-utils');
 
 const componentNameRegexp = /<([A-Z][a-zA-Z_]+)/gm;
 
@@ -12,6 +14,45 @@ function processComponentName(value) {
   }
   const components = matches.map(c => c.slice(1));
   return components;
+}
+
+/**
+ * Importing in your Markdown is repetitive and annoying.
+ */
+function resolveImport(componentName) {
+  if (componentName === 'JSX_IMPORT') {
+    return { default: 'React', from: 'react' };
+  }
+
+  if (componentName === 'Link') {
+    return { destructure: 'Link', from: 'gatsby' };
+  }
+
+  if (componentName === 'InlineMath') {
+    return { destructure: 'InlineMath', from: 'react-katex' };
+  }
+
+  if (componentName === 'BlockMath') {
+    return { destructure: 'BlockMath', from: 'react-katex' };
+  }
+
+  return { default: componentName, from: '../components/' + componentName };
+}
+
+function stringifyImport(importDescription) {
+  if (Boolean(importDescription.destructure)) {
+    return `import {${importDescription.destructure}} from "${
+      importDescription.from
+    }";`;
+  }
+
+  if (Boolean(importDescription.default)) {
+    return `import ${importDescription.default} from "${
+      importDescription.from
+    }";`;
+  }
+
+  return null;
 }
 
 function toJSX(node) {
@@ -41,10 +82,12 @@ function toJSX(node) {
       .map(prop => `${prop}="${node.properties[prop]}"`)
       .join(' ');
     const tagName = node.tagName;
+    const jsx = `<${tagName}${
+      props.length > 0 ? ' ' : ''
+    }${props}>${contents}</${tagName}>`;
+
     return {
-      jsx: `<${tagName}${
-        props.length > 0 ? ' ' : ''
-      }${props}>${contents}</${tagName}>`,
+      jsx,
       imports,
     };
   }
@@ -55,60 +98,82 @@ function toJSX(node) {
       imports: processComponentName(node.value),
     };
   }
+}
 
-  if (node.type === 'root') {
-    const children = node.children.map(toJSX);
-    const contents = children.map(c => c.jsx).join('');
-    const imports = Array.from(
-      children
-        .map(c => c.imports)
-        .reduce((a, b) => a.concat(b))
-        .reduce((s, componentName) => s.add(componentName), new Set(['Layout']))
-    )
-      .map(componentName => {
-        if (componentName === 'Link') {
-          return 'import {Link} from "gatsby";';
-        }
-        if (componentName === 'InlineMath') {
-          return 'import {InlineMath} from "react-katex";';
-        }
-        if (componentName === 'BlockMath') {
-          return 'import {BlockMath} from "react-katex";';
-        }
+const compiler = options => node => {
+  if (node.type !== 'root') {
+    console.error('Compiler was not passed a root node.', node);
+    return;
+  }
 
-        return `import ${componentName} from '../components/${componentName}';`;
-      })
-      .concat('import React from "react";');
-    return (
-      imports.join('\n') +
-      '\n\n' +
-      `
+  const children = node.children.map(toJSX);
+  const contents = children.map(c => c.jsx).join('');
+  const imports = Array.from(
+    children
+      .map(c => c.imports)
+      .reduce((a, b) => a.concat(b))
+      .reduce(
+        (s, componentName) => s.add(componentName),
+        new Set(['JSX_IMPORT', 'Layout'])
+      )
+  )
+    .map(options.resolveImport)
+    .map(stringifyImport);
+  return imports.join('\n') + '\n\n' + options.stringifyRoot(contents);
+};
+
+function hastToJSX(options) {
+  this.Compiler = compiler(options);
+}
+
+function stringifyRoot(root) {
+  return `
 export default function() {
   return (
-    <React.Fragment>
-      <Layout>
-      ${contents}
-      </Layout>
-    </React.Fragment>
+    <Layout>
+    ${root}
+    </Layout>
   );
-}`
-    );
-  }
+}`;
 }
 
-function hastToJSX() {
-  this.Compiler = toJSX;
-}
+const schema = {
+  additionalProperties: false,
+  type: 'object',
+  properties: {
+    stringifyRoot: {
+      instanceOf: 'Function',
+    },
+    resolveImport: {
+      instanceOf: 'Function',
+    },
+  },
+};
 
-const processor = unified()
-  .use(remark)
-  .use(math)
-  .use(remarkRehypeBridge, { allowDangerousHTML: true })
-  .use(hastToJSX);
+/**
+ * Pipeline:
+ *
+ * 1. Parse the Markdown source into a MDAST with remark.
+ * 2. Transform the MDAST into a HAST with remark-rehype.
+ * 3. Stringify HAST into JSX.
+ */
+module.exports = function(source) {
+  const defaultOptions = {
+    stringifyRoot,
+    resolveImport,
+  };
+  const options = { ...defaultOptions, ...getOptions(this) };
+  validateOptions(schema, options, 'mdx-loader');
 
-module.exports = function(source, map, meta) {
   const callback = this.async();
+
+  const processor = unified()
+    .use(remark)
+    .use(math)
+    .use(remarkRehypeBridge, { allowDangerousHTML: true })
+    .use(hastToJSX, options);
+
   processor.process(source).then(jsx => {
-    callback(null, jsx, map, meta);
+    callback(null, jsx);
   });
 };
