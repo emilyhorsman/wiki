@@ -22,6 +22,8 @@ const mdxQuery = graphql =>
   `);
 
 exports.onCreateWebpackConfig = ({ actions, loaders }) => {
+  const math = require('remark-math');
+
   actions.setWebpackConfig({
     resolveLoader: {
       alias: {
@@ -32,7 +34,15 @@ exports.onCreateWebpackConfig = ({ actions, loaders }) => {
       rules: [
         {
           test: mdxTestRe,
-          use: [loaders.js(), 'mdx-loader'],
+          use: [
+            loaders.js(),
+            {
+              loader: 'mdx-loader',
+              options: {
+                postRemarkUnifiedPlugins: [[math, {}]],
+              },
+            },
+          ],
         },
       ],
     },

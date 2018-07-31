@@ -1,4 +1,3 @@
-const math = require('remark-math');
 const remark = require('remark-parse');
 const remarkRehypeBridge = require('remark-rehype');
 const unified = require('unified');
@@ -137,6 +136,18 @@ export default function() {
 }`;
 }
 
+const schemaPlugins = {
+  type: 'array',
+  items: [
+    {
+      instanceOf: 'Function',
+    },
+    {
+      type: 'object',
+    },
+  ],
+};
+
 const schema = {
   additionalProperties: false,
   type: 'object',
@@ -147,6 +158,10 @@ const schema = {
     resolveImport: {
       instanceOf: 'Function',
     },
+    preRemarkUnifiedPlugins: schemaPlugins,
+    postRemarkUnifiedPlugins: schemaPlugins,
+    postRehypeUnifiedPlugins: schemaPlugins,
+    postJSXUnifiedPlugins: schemaPlugins,
   },
 };
 
@@ -161,17 +176,29 @@ module.exports = function(source) {
   const defaultOptions = {
     stringifyRoot,
     resolveImport,
+    preRemarkUnifiedPlugins: [],
+    postRemarkUnifiedPlugins: [],
+    postRehypeUnifiedPlugins: [],
+    postJSXUnifiedPlugins: [],
   };
   const options = { ...defaultOptions, ...getOptions(this) };
   validateOptions(schema, options, 'mdx-loader');
 
   const callback = this.async();
 
-  const processor = unified()
-    .use(remark)
-    .use(math)
-    .use(remarkRehypeBridge, { allowDangerousHTML: true })
-    .use(hastToJSX, options);
+  const plugins = [
+    ...options.preRemarkUnifiedPlugins,
+    [remark, {}],
+    ...options.postRemarkUnifiedPlugins,
+    [remarkRehypeBridge, { allowDangerousHTML: true }],
+    ...options.postRehypeUnifiedPlugins,
+    [hastToJSX, options],
+    ...options.postJSXUnifiedPlugins,
+  ];
+  const processor = plugins.reduce((acc, [plugin, pluginOptions]) => {
+    acc.use(plugin, pluginOptions);
+    return acc;
+  }, unified());
 
   processor.process(source).then(jsx => {
     callback(null, jsx);
