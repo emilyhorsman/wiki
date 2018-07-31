@@ -21,6 +21,28 @@ const mdxQuery = graphql =>
     }
   `);
 
+function stringifyJSX(node) {
+  if (node.type !== 'element') {
+    return null;
+  }
+
+  if (node.tagName === 'span' && node.properties.className === 'inlineMath') {
+    return {
+      jsx: `<InlineMath>${node.children[0].value}</InlineMath>`,
+      imports: ['InlineMath'],
+    };
+  }
+
+  if (node.tagName === 'div' && node.properties.className === 'math') {
+    return {
+      jsx: `<BlockMath>{String.raw\`${node.children[0].value}\`}</BlockMath>`,
+      imports: ['BlockMath'],
+    };
+  }
+
+  return null;
+}
+
 exports.onCreateWebpackConfig = ({ actions, loaders }) => {
   const math = require('remark-math');
 
@@ -40,6 +62,7 @@ exports.onCreateWebpackConfig = ({ actions, loaders }) => {
               loader: 'mdx-loader',
               options: {
                 postRemarkUnifiedPlugins: [[math, {}]],
+                stringifyJSX,
               },
             },
           ],

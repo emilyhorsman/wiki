@@ -54,27 +54,18 @@ function stringifyImport(importDescription) {
   return null;
 }
 
-function toJSX(node) {
+function toJSX(node, stringifyJSX) {
+  const result = stringifyJSX(node);
+  if (result !== null) {
+    return result;
+  }
+
   if (node.type === 'text') {
     return { jsx: node.value, imports: [] };
   }
 
   if (node.type === 'element') {
-    if (node.tagName === 'span' && node.properties.className === 'inlineMath') {
-      return {
-        jsx: `<InlineMath>${node.children[0].value}</InlineMath>`,
-        imports: ['InlineMath'],
-      };
-    }
-
-    if (node.tagName === 'div' && node.properties.className === 'math') {
-      return {
-        jsx: `<BlockMath>{String.raw\`${node.children[0].value}\`}</BlockMath>`,
-        imports: ['BlockMath'],
-      };
-    }
-
-    const children = node.children.map(toJSX);
+    const children = node.children.map(node => toJSX(node, stringifyJSX));
     const contents = children.map(c => c.jsx).join('');
     const imports = children.map(c => c.imports).reduce((a, b) => a.concat(b));
     const props = Object.keys(node.properties)
@@ -105,7 +96,7 @@ const compiler = options => node => {
     return;
   }
 
-  const children = node.children.map(toJSX);
+  const children = node.children.map(node => toJSX(node, options.stringifyJSX));
   const contents = children.map(c => c.jsx).join('');
   const imports = Array.from(
     children
@@ -152,16 +143,19 @@ const schema = {
   additionalProperties: false,
   type: 'object',
   properties: {
-    stringifyRoot: {
-      instanceOf: 'Function',
-    },
+    postJSXUnifiedPlugins: schemaPlugins,
+    postRehypeUnifiedPlugins: schemaPlugins,
+    postRemarkUnifiedPlugins: schemaPlugins,
+    preRemarkUnifiedPlugins: schemaPlugins,
     resolveImport: {
       instanceOf: 'Function',
     },
-    preRemarkUnifiedPlugins: schemaPlugins,
-    postRemarkUnifiedPlugins: schemaPlugins,
-    postRehypeUnifiedPlugins: schemaPlugins,
-    postJSXUnifiedPlugins: schemaPlugins,
+    stringifyJSX: {
+      instanceOf: 'Function',
+    },
+    stringifyRoot: {
+      instanceOf: 'Function',
+    },
   },
 };
 
@@ -174,12 +168,13 @@ const schema = {
  */
 module.exports = function(source) {
   const defaultOptions = {
-    stringifyRoot,
-    resolveImport,
-    preRemarkUnifiedPlugins: [],
-    postRemarkUnifiedPlugins: [],
-    postRehypeUnifiedPlugins: [],
     postJSXUnifiedPlugins: [],
+    postRehypeUnifiedPlugins: [],
+    postRemarkUnifiedPlugins: [],
+    preRemarkUnifiedPlugins: [],
+    resolveImport,
+    stringifyJSX: () => null,
+    stringifyRoot,
   };
   const options = { ...defaultOptions, ...getOptions(this) };
   validateOptions(schema, options, 'mdx-loader');
