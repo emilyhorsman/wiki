@@ -6,7 +6,7 @@ const validateOptions = require('schema-utils');
 
 const componentNameRegexp = /<([A-Z][a-zA-Z_]+)/gm;
 
-function processComponentName(value) {
+function matchComponentNameImports(value) {
   const matches = value.match(componentNameRegexp);
   if (matches === null) {
     return [];
@@ -88,7 +88,7 @@ function toJSX(node, stringifyJSX) {
   if (node.type === 'raw') {
     return {
       jsx: node.value,
-      imports: processComponentName(node.value),
+      imports: matchComponentNameImports(node.value),
     };
   }
 }
@@ -112,7 +112,7 @@ const compiler = options => {
         .reduce((a, b) => a.concat(b))
         .reduce(
           (s, componentName) => s.add(componentName),
-          new Set(['JSX_IMPORT', ...processComponentName(options.stringifyRoot(''))])
+          new Set(['JSX_IMPORT', ...matchComponentNameImports(options.stringifyRoot(''))])
         )
     )
       .map(resolveImport)
