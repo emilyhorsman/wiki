@@ -15,27 +15,30 @@ function processComponentName(value) {
   return components;
 }
 
-/**
- * Importing in your Markdown is repetitive and annoying.
- */
-function resolveImport(componentName) {
+function resolveReactJSXImport(componentName) {
   if (componentName === 'JSX_IMPORT') {
     return { default: 'React', from: 'react' };
   }
+  return null;
+}
 
-  if (componentName === 'Link') {
-    return { destructure: 'Link', from: 'gatsby' };
-  }
-
-  if (componentName === 'InlineMath') {
-    return { destructure: 'InlineMath', from: 'react-katex' };
-  }
-
-  if (componentName === 'BlockMath') {
-    return { destructure: 'BlockMath', from: 'react-katex' };
-  }
-
+function resolveFilesystemImport(componentName) {
   return { default: componentName, from: '../components/' + componentName };
+}
+
+function resolveImportFactory(importResolvers) {
+  /**
+   * Each import resolver gets a chance to resolve the import. The first
+   * to return a truthy value becomes the resolution.
+   */
+  return function(componentName) {
+    for (let i = 0; i < importResolvers.length; i++) {
+      const result = importResolvers[i](componentName);
+      if (Boolean(result)) {
+        return result;
+      }
+    }
+  };
 }
 
 function stringifyImport(importDescription) {
@@ -90,26 +93,32 @@ function toJSX(node, stringifyJSX) {
   }
 }
 
-const compiler = options => node => {
-  if (node.type !== 'root') {
-    console.error('Compiler was not passed a root node.', node);
-    return;
-  }
+const compiler = options => {
+  const resolveImport = resolveImportFactory(options.importResolvers);
 
-  const children = node.children.map(node => toJSX(node, options.stringifyJSX));
-  const contents = children.map(c => c.jsx).join('');
-  const imports = Array.from(
-    children
-      .map(c => c.imports)
-      .reduce((a, b) => a.concat(b))
-      .reduce(
-        (s, componentName) => s.add(componentName),
-        new Set(['JSX_IMPORT', 'Layout'])
-      )
-  )
-    .map(options.resolveImport)
-    .map(stringifyImport);
-  return imports.join('\n') + '\n\n' + options.stringifyRoot(contents);
+  return node => {
+    if (node.type !== 'root') {
+      console.error('Compiler was not passed a root node.', node);
+      return;
+    }
+
+    const children = node.children.map(node =>
+      toJSX(node, options.stringifyJSX)
+    );
+    const contents = children.map(c => c.jsx).join('');
+    const imports = Array.from(
+      children
+        .map(c => c.imports)
+        .reduce((a, b) => a.concat(b))
+        .reduce(
+          (s, componentName) => s.add(componentName),
+          new Set(['JSX_IMPORT', 'Layout'])
+        )
+    )
+      .map(resolveImport)
+      .map(stringifyImport);
+    return imports.join('\n') + '\n\n' + options.stringifyRoot(contents);
+  };
 };
 
 function hastToJSX(options) {
@@ -143,13 +152,16 @@ const schema = {
   additionalProperties: false,
   type: 'object',
   properties: {
+    importResolvers: {
+      type: 'array',
+      items: {
+        instanceOf: 'Function',
+      },
+    },
     postJSXUnifiedPlugins: schemaPlugins,
     postRehypeUnifiedPlugins: schemaPlugins,
     postRemarkUnifiedPlugins: schemaPlugins,
     preRemarkUnifiedPlugins: schemaPlugins,
-    resolveImport: {
-      instanceOf: 'Function',
-    },
     stringifyJSX: {
       instanceOf: 'Function',
     },
@@ -168,11 +180,11 @@ const schema = {
  */
 module.exports = function(source) {
   const defaultOptions = {
+    importResolvers: [resolveReactJSXImport, resolveFilesystemImport],
     postJSXUnifiedPlugins: [],
     postRehypeUnifiedPlugins: [],
     postRemarkUnifiedPlugins: [],
     preRemarkUnifiedPlugins: [],
-    resolveImport,
     stringifyJSX: () => null,
     stringifyRoot,
   };
@@ -199,3 +211,6 @@ module.exports = function(source) {
     callback(null, jsx);
   });
 };
+
+module.exports.resolveFilesystemImport = resolveFilesystemImport;
+module.exports.resolveReactJSXImport = resolveReactJSXImport;

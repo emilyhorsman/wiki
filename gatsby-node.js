@@ -43,8 +43,28 @@ function stringifyJSX(node) {
   return null;
 }
 
+function resolveLinkImport(componentName) {
+  if (componentName === 'Link') {
+    return { destructure: 'Link', from: 'gatsby' };
+  }
+  return null;
+}
+
+function resolveMathImport(componentName) {
+  if (componentName === 'InlineMath') {
+    return { destructure: 'InlineMath', from: 'react-katex' };
+  }
+
+  if (componentName === 'BlockMath') {
+    return { destructure: 'BlockMath', from: 'react-katex' };
+  }
+
+  return null;
+}
+
 exports.onCreateWebpackConfig = ({ actions, loaders }) => {
   const math = require('remark-math');
+  const mdxLoader = require('./mdx-loader');
 
   actions.setWebpackConfig({
     resolveLoader: {
@@ -61,6 +81,12 @@ exports.onCreateWebpackConfig = ({ actions, loaders }) => {
             {
               loader: 'mdx-loader',
               options: {
+                importResolvers: [
+                  mdxLoader.resolveReactJSXImport,
+                  resolveMathImport,
+                  resolveLinkImport,
+                  mdxLoader.resolveFilesystemImport,
+                ],
                 postRemarkUnifiedPlugins: [[math, {}]],
                 stringifyJSX,
               },
