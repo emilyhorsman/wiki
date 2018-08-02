@@ -112,7 +112,7 @@ const compiler = options => {
         .reduce((a, b) => a.concat(b))
         .reduce(
           (s, componentName) => s.add(componentName),
-          new Set(['JSX_IMPORT', 'Layout'])
+          new Set(['JSX_IMPORT', ...processComponentName(options.stringifyRoot(''))])
         )
     )
       .map(resolveImport)
