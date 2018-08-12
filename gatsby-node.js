@@ -64,13 +64,11 @@ function resolveMathImport(componentName) {
 
 exports.onCreateWebpackConfig = ({ actions, loaders }) => {
   const math = require('remark-math');
-  const mdxLoader = require('./mdx-loader');
+  const mdxLoader = require('@emilyhorsman/mdx');
 
   actions.setWebpackConfig({
     resolveLoader: {
-      alias: {
-        'mdx-loader': require('path').resolve('./mdx-loader.js'),
-      },
+      modules: ['node_modules']
     },
     module: {
       rules: [
@@ -79,7 +77,7 @@ exports.onCreateWebpackConfig = ({ actions, loaders }) => {
           use: [
             loaders.js(),
             {
-              loader: 'mdx-loader',
+              loader: '@emilyhorsman/mdx',
               options: {
                 importResolvers: [
                   mdxLoader.resolveReactJSXImport,
