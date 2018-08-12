@@ -64,6 +64,7 @@ function resolveMathImport(componentName) {
 
 exports.onCreateWebpackConfig = ({ actions, loaders }) => {
   const math = require('remark-math');
+  const frontmatter = require('remark-frontmatter');
   const mdxLoader = require('@emilyhorsman/mdx');
 
   actions.setWebpackConfig({
@@ -85,7 +86,12 @@ exports.onCreateWebpackConfig = ({ actions, loaders }) => {
                   resolveLinkImport,
                   mdxLoader.resolveFilesystemImport,
                 ],
-                postRemarkUnifiedPlugins: [[math, {}]],
+                postRemarkUnifiedPlugins: [
+                  // This is just to strip the frontmatter out. We won't use it
+                  // in the unified pipeline.
+                  [frontmatter, {type: 'yaml', marker: '-'}],
+                  [math, {}]
+                ],
                 stringifyJSX,
               },
             },
