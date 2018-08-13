@@ -7,7 +7,7 @@ import Header from './Header';
 import './Layout.css';
 import "katex/dist/katex.min.css";
 
-const Layout = ({ children, data }) => (
+const Layout = ({ children, pageContext }) => (
   <StaticQuery
     query={graphql`
       query SiteTitleQuery {
@@ -27,7 +27,7 @@ const Layout = ({ children, data }) => (
             { name: 'keywords', content: 'sample, something' },
           ]}
         />
-        <Header siteTitle={data.site.siteMetadata.title} />
+        <Header pageTitle={pageContext.frontmatter.title} />
         <div
           style={{
             margin: '0 auto',

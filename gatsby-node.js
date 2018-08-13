@@ -3,6 +3,8 @@
  *
  * See: https://www.gatsbyjs.org/docs/node-apis/
  */
+const fs = require('fs');
+const yaml = require('js-yaml');
 
 const mdxTestRe = /\.mdx?$/;
 
@@ -69,7 +71,7 @@ exports.onCreateWebpackConfig = ({ actions, loaders }) => {
 
   actions.setWebpackConfig({
     resolveLoader: {
-      modules: ['node_modules']
+      modules: ['node_modules'],
     },
     module: {
       rules: [
@@ -89,8 +91,8 @@ exports.onCreateWebpackConfig = ({ actions, loaders }) => {
                 postRemarkUnifiedPlugins: [
                   // This is just to strip the frontmatter out. We won't use it
                   // in the unified pipeline.
-                  [frontmatter, {type: 'yaml', marker: '-'}],
-                  [math, {}]
+                  [frontmatter, { type: 'yaml', marker: '-' }],
+                  [math, {}],
                 ],
                 stringifyJSX,
               },
@@ -102,6 +104,41 @@ exports.onCreateWebpackConfig = ({ actions, loaders }) => {
   });
 };
 
+function getFrontmatter(absolutePath) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(absolutePath, 'utf8', (err, data) => {
+      if (err) {
+        reject(err);
+      }
+
+      if (!data.startsWith('---')) {
+        resolve({});
+        return;
+      }
+      const end = data.indexOf('---', 3);
+      if (end === -1) {
+        resolve({});
+        return;
+      }
+      const frontmatter = data.substring(3, end);
+      const options = yaml.safeLoad(frontmatter, { filename: absolutePath });
+      resolve(options);
+    });
+  });
+}
+
+function getPage({ absolutePath, relativeDirectory, name }) {
+  return getFrontmatter(absolutePath).then(frontmatter => {
+    return {
+      path: `${relativeDirectory}/${name}`,
+      component: absolutePath,
+      context: {
+        frontmatter,
+      },
+    };
+  });
+}
+
 exports.createPages = ({ graphql, actions: { createPage } }) => {
   return new Promise((resolve, reject) => {
     const query = mdxQuery(graphql)
@@ -110,13 +147,9 @@ exports.createPages = ({ graphql, actions: { createPage } }) => {
           return reject(result.errors);
         }
 
-        result.data.allFile.edges
-          .map(edge => edge.node)
-          .map(({ absolutePath, relativeDirectory, name }) => ({
-            path: `${relativeDirectory}/${name}`,
-            component: absolutePath,
-          }))
-          .forEach(page => createPage(page));
+        Promise.all(
+          result.data.allFile.edges.map(edge => edge.node).map(getPage)
+        ).then(pages => pages.forEach(page => createPage(page)));
       })
       .then(resolve);
   });
