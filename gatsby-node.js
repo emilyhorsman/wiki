@@ -133,10 +133,19 @@ function getFrontmatter(absolutePath) {
   });
 }
 
+function getPath(relativeDirectory, name) {
+  if (name === 'index') {
+    return relativeDirectory + '/';
+  }
+
+  return `${relativeDirectory}/${name}`
+}
+
 function getPage({ absolutePath, relativeDirectory, name }) {
   return getFrontmatter(absolutePath).then(frontmatter => {
+    const pathName = name === 'index' ? '' : name
     return {
-      path: `${relativeDirectory}/${name}`,
+      path: getPath(relativeDirectory, name),
       component: absolutePath,
       context: {
         frontmatter,
