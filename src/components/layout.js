@@ -27,7 +27,7 @@ const Layout = ({ children, pageContext }) => (
             { name: 'keywords', content: 'sample, something' },
           ]}
         />
-        <Header pageTitle={pageContext.frontmatter.title} />
+        <Header pageTitle={pageContext == null ? data.site.siteMetadata.title : pageContext.frontmatter.title} />
         <div
           style={{
             margin: '0 auto',
