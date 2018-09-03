@@ -4,6 +4,7 @@
  * See: https://www.gatsbyjs.org/docs/node-apis/
  */
 const fs = require('fs');
+const path = require('path');
 const yaml = require('js-yaml');
 
 const mdxTestRe = /\.mdx?$/;
@@ -70,6 +71,11 @@ exports.onCreateWebpackConfig = ({ actions, loaders }) => {
   const mdxLoader = require('@emilyhorsman/mdx');
 
   actions.setWebpackConfig({
+    resolve: {
+      alias: {
+        '~': path.resolve(__dirname, 'src/components')
+      }
+    },
     resolveLoader: {
       modules: ['node_modules'],
     },
