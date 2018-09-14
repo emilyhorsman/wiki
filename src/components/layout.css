@@ -623,29 +623,17 @@ pre tt:after {
   }
 }
 
-.article h1:before,
-.article h2:before,
-.article h3:before,
-.article h4:before {
-  color: #ddd;
-  position: absolute;
-  margin-left: -110px;
-  text-align: right;
-  width: 100px;
+.article h1 {
+  font-size: 1.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 0.75rem;
 }
 
-.article h1:before {
-  content: '#';
+.article h2 {
+  font-size: 1.4rem;
 }
 
-.article h2:before {
-  content: '##';
-}
-
-.article h3:before {
-  content: '###';
-}
-
-.article h4:before {
-  content: '####';
+.article h3 {
+  font-size: 1.1rem;
 }
