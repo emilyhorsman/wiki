@@ -31,7 +31,7 @@ function stringifyJSX(node) {
 
   if (node.tagName === 'span' && node.properties.className === 'inlineMath') {
     return {
-      jsx: `<InlineMath>${node.children[0].value}</InlineMath>`,
+      jsx: `<InlineMath>{String.raw\`${node.children[0].value}\`}</InlineMath>`,
       imports: ['InlineMath'],
     };
   }
