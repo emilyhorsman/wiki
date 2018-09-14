@@ -29,6 +29,7 @@ const Layout = ({ children, pageContext }) => (
         />
         <Header pageTitle={pageContext == null ? data.site.siteMetadata.title : pageContext.frontmatter.title} />
         <div
+          className="article"
           style={{
             margin: '0 auto',
             maxWidth: 960,
